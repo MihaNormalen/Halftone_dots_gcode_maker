@@ -1,2 +1,2 @@
-# Halftone_dots_gcode_maker
-DotsSVG Master: Advanced CNC Painting This project is a high-performance G-code generator designed specifically for CNC painting machines that process SVG circle patterns. It transforms vector data into precise painting instructions with a focus on fluid motion, ink/paint management, and path efficiency.
+DotsSVG Master: Halftone Vector Painting
+This specialized G-code generator is designed for CNC painting machines to reproduce Halftone-style vector dot patterns. It converts SVG circle data into optimized toolpaths, using advanced infill strategies to recreate the classic halftone aesthetic with real paint.
