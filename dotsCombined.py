@@ -8,7 +8,6 @@ import random
 try:
     from dotPainter import GCodeBaseGenerator
 except ImportError:
-    # Če nimate ločene datoteke dotPainter.py, uporabimo definicijo iz Width2Depth
     class GCodeBaseGenerator:
         def __init__(self, feed_rate, x_offset, y_offset,
                      dip_location_raw, dip_duration_s,
@@ -43,7 +42,6 @@ except ImportError:
             self.gcode.append(f"\n; --- Namakanje (Spiralno) ---")
             self.gcode.append(f"G0 Z{self.z_safe_dip:.3f}\nG0 X{self.dip_location[0]:.3f} Y{self.dip_location[1]:.3f}")
             self.gcode.append(f"G1 Z{self.dip_location[2]:.3f} F800")
-            # Spiralni gib v posodici (iz dotsSVGkrogci.py)
             d_theta = 0.2
             for i in range(32):
                 theta = i * d_theta
@@ -63,17 +61,14 @@ class SVGCircleGenerator(GCodeBaseGenerator):
         self.brush_width = brush_width
         self.overlap = overlap
         self.max_distance_per_dip = max_distance_per_dip
-        self.fill_type = fill_type # 'spiral' ali 'concentric'
+        self.fill_type = fill_type 
         self.distance_since_dip = 0
 
     def calculate_path_length(self, r):
-        """Izračuna dolžino poti glede na izbran način polnjenja."""
         step = self.brush_width * (1.0 - self.overlap)
         if self.fill_type == 'spiral':
-            # Arhimedova spirala: L ≈ (pi * R^2) / d
-            return (math.pi * (r**2)) / (self.brush_width * self.overlap) if r > 0 else 0
+            return (math.pi * (r**2)) / (self.brush_width * (1.0 - self.overlap)) if r > 0 else 0
         else:
-            # Koncentrični krogi
             total_len, curr_r = 0, r
             while curr_r > 0:
                 total_len += 2 * math.pi * curr_r
@@ -81,8 +76,8 @@ class SVGCircleGenerator(GCodeBaseGenerator):
             return max(total_len, 0.1)
 
     def paint_spiral(self, cx, cy, r):
-        """Spiralno polnjenje iz DotsSVGspirala.py."""
-        step_distance = self.brush_width * self.overlap
+        
+        step_distance = self.brush_width * (1.0 - self.overlap)
         theta = 0
         self.gcode.append(f"G0 X{cx:.3f} Y{cy:.3f} Z{self.z_safe:.3f}")
         self.gcode.append(f"G1 Z{self.z_global_offset:.3f} F600")
@@ -94,7 +89,7 @@ class SVGCircleGenerator(GCodeBaseGenerator):
         self.gcode.append(f"G1 Z{self.z_safe:.3f} F800")
 
     def paint_concentric(self, cx, cy, r):
-        """Koncentrično polnjenje iz dotsSVGkrogci.py."""
+        
         step = self.brush_width * (1.0 - self.overlap)
         curr_r = r
         first = True
@@ -114,23 +109,28 @@ class SVGCircleGenerator(GCodeBaseGenerator):
             curr_r -= step
         self.gcode.append(f"G1 Z{self.z_safe:.3f} F800")
 
+    def parse_and_scale_svg(self, svg_path, target_width_mm):
+        tree = ET.parse(svg_path)
+        root = tree.getroot()
+        circles = []
+        for c in root.iter():
+            if 'circle' in c.tag:
+                circles.append({'cx': float(c.get('cx',0)), 'cy': float(c.get('cy',0)), 'r': float(c.get('r',0))})
+        if not circles: return []
+        min_x = min(c['cx'] - c['r'] for c in circles)
+        max_x = max(c['cx'] + c['r'] for c in circles)
+        max_y = max(c['cy'] + c['r'] for c in circles)
+        scale = target_width_mm / (max_x - min_x) if (max_x - min_x) > 0 else 1.0
+        return [{'x': (c['cx'] - min_x) * scale + self.x_offset, 'y': (max_y - c['cy']) * scale + self.y_offset, 'r': c['r'] * scale} for c in circles]
+
     def run(self, svg_path, target_width):
         self.gcode.append("G90\nG21")
-        # Logika parsiranja SVG (skrajšana verzija iz vaših skript)
-        tree = ET.parse(svg_path)
-        circles = []
-        for c in tree.getroot().iter():
-            if 'circle' in c.tag:
-                circles.append({'x': float(c.get('cx',0)), 'y': float(c.get('cy',0)), 'r': float(c.get('r',0))})
-        
-        # Skaliranje in optimizacija poti (Greedy search)
-        # ... (Tukaj se izvede skaliranje na target_width kot v vaših originalih)
-        
+        circles = self.parse_and_scale_svg(svg_path, target_width)
         current_pos = (self.dip_location[0], self.dip_location[1])
-        # Za test uporabimo kar neobdelan seznam krogov
+        
         while circles:
-            # Optimizacija: najdi najbližjega
-            dot = circles.pop(0) 
+            best_idx = min(range(len(circles)), key=lambda i: math.hypot(circles[i]['x']-current_pos[0], circles[i]['y']-current_pos[1]))
+            dot = circles.pop(best_idx)
             path_len = self.calculate_path_length(dot['r'])
             
             if (self.distance_since_dip + path_len) > self.max_distance_per_dip:
@@ -143,25 +143,46 @@ class SVGCircleGenerator(GCodeBaseGenerator):
                 self.paint_concentric(dot['x'], dot['y'], dot['r'])
             
             self.distance_since_dip += path_len
+            current_pos = (dot['x'], dot['y'])
         self.gcode.append("M2")
 
 if __name__ == "__main__":
+    # ==========================================
+    # GLAVNE NASTAVITVE (STOLPEC SPREMENLJIVK)
+    # ==========================================
+    FILL_TYPE    = 'spiral'    # Izbira: 'spiral' ali 'concentric'
+    BRUSH_WIDTH  = 1.5         # Debelina čopiča v mm
+    OVERLAP      = 0.8         # Prekrivanje (0.0 - 1.0)
+    MAX_DIST     = 1000.0      # Max pot barvanja pred namakanjem (mm)
+    TARGET_WIDTH = 200.0       # Ciljna širina slike (mm)
+    FEED_RATE    = 1500        # Hitrost premikanja (mm/min)
+    
+    # Lokacija namakanja in offseti
+    X_OFFSET     = 33.0
+    Y_OFFSET     = 110.0
+    DIP_X        = 91.0
+    DIP_Y        = 25.0
+    DIP_Z        = 1.3
+    DIP_WIPE_R   = 29.0
+    
+    # Višine Z
+    Z_SAFE       = 5.0
+    Z_SAFE_DIP   = 16.0
+    Z_GLOBAL_OFF = 0.0
+    # ==========================================
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("input")
-    parser.add_argument("output")
-    parser.add_argument("--fill_type", choices=['spiral', 'concentric'], default='spiral', help="Način polnjenja krogov")
-    parser.add_argument("--width", type=float, default=200.0)
-    parser.add_argument("--brush", type=float, default=1.0)
-    parser.add_argument("--max_dist", type=float, default=1000.0)
+    parser.add_argument("input", help="Vhodna SVG datoteka")
+    parser.add_argument("output", help="Izhodna G-koda")
     args = parser.parse_args()
 
     painter = SVGCircleGenerator(
-        brush_width=args.brush, overlap=0.8, max_distance_per_dip=args.max_dist,
-        fill_type=args.fill_type, feed_rate=1500, x_offset=30.0, y_offset=30.0,
-        dip_location_raw=(90.0, 20.0, 1.5), dip_duration_s=0.2,
-        dip_wipe_radius=25.0, z_wipe_travel_raw=1.0, dip_entry_radius=5.0,
-        remove_drops_enabled=True, z_global_offset_val=0.0,
-        z_safe_raw=5.0, z_safe_dip_raw=15.0
+        brush_width=BRUSH_WIDTH, overlap=OVERLAP, max_distance_per_dip=MAX_DIST,
+        fill_type=FILL_TYPE, feed_rate=FEED_RATE, x_offset=X_OFFSET, y_offset=Y_OFFSET,
+        dip_location_raw=(DIP_X, DIP_Y, DIP_Z), dip_duration_s=0.2,
+        dip_wipe_radius=DIP_WIPE_R, z_wipe_travel_raw=1.0, dip_entry_radius=3.0,
+        remove_drops_enabled=True, z_global_offset_val=Z_GLOBAL_OFF,
+        z_safe_raw=Z_SAFE, z_safe_dip_raw=Z_SAFE_DIP
     )
-    painter.run(args.input, args.width)
+    painter.run(args.input, TARGET_WIDTH)
     painter.save(args.output)
