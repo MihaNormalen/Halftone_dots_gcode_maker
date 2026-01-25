@@ -1,374 +1,179 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DotsSVG Master - Professional UI</title>
+    <title>Halftone Master V6.2 - Skaliranje</title>
     <style>
-        :root {
-            --bg-color: #121212;
-            --panel-color: #1e1e1e;
-            --accent-color: #00adb5;
-            --text-color: #e0e0e0;
-            --input-bg: #2b2b2b;
-            --border-color: #333;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            display: flex;
-            height: 100vh;
-        }
-
-        /* Sidebar */
-        #sidebar {
-            width: 380px;
-            background-color: var(--panel-color);
-            padding: 20px;
-            overflow-y: auto;
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-        }
-
-        h2 { color: var(--accent-color); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 5px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-        .group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 0.75rem; color: #888; text-transform: uppercase; }
-        
-        input, select {
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-
-        .btn-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        button {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.2s;
-        }
+        :root { --bg: #121212; --accent: #00adb5; --text: #e0e0e0; --panel: #1e1e1e; --border: #333; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; }
+        #sidebar { width: 360px; background: var(--panel); padding: 20px; border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        h2 { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 10px 0 5px; }
+        .group { display: flex; flex-direction: column; gap: 3px; }
+        label { font-size: 0.7rem; color: #888; }
+        input { background: #2b2b2b; border: 1px solid var(--border); color: white; padding: 8px; border-radius: 4px; font-size: 0.85rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:hover { filter: brightness(1.2); }
-        .secondary-btn { background-color: #444; }
-
-        /* Main Viewport */
-        #viewport {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            gap: 15px;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #121212 100%);
-        }
-
-        #canvas-wrapper {
-            flex-grow: 1;
-            position: relative;
-            background: #000;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-
-        #terminal {
-            height: 180px;
-            background: #080808;
-            border: 1px solid #222;
-            border-radius: 6px;
-            padding: 10px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.75rem;
-            color: #4caf50;
-            overflow-y: scroll;
-            white-space: pre;
-        }
-
-        .stats { font-size: 0.8rem; color: #00adb5; margin-bottom: 5px; }
+        #main { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        #terminal { flex-grow: 1; background: #000; color: var(--accent); font-family: monospace; padding: 15px; border-radius: 8px; overflow-y: auto; font-size: 0.75rem; border: 1px solid #222; white-space: pre; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2 style="margin-top:0">📁 Halftone Input</h2>
+    <h2 style="margin-top:0">📁 Datoteka & Velikost</h2>
+    <input type="file" id="fileInput" accept=".svg">
     <div class="group">
-        <label>SVG File</label>
-        <input type="file" id="fileInput" accept=".svg">
-    </div>
-
-    <h2>🎨 Painting Logic</h2>
-    <div class="group">
-        <label>Infill Method</label>
-        <select id="fillType">
-            <option value="spiral">Halftone Spiral (Fluid)</option>
-            <option value="concentric">Concentric Rings (Classic)</option>
-        </select>
-    </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="group"><label>Brush (mm)</label><input type="number" id="brushWidth" value="2.0" step="0.1"></div>
-        <div class="group"><label>Overlap</label><input type="number" id="overlap" value="0.8" step="0.05"></div>
-    </div>
-    <div class="group">
-        <label>Target Width (mm)</label>
+        <label>Ciljna širina slike (mm)</label>
         <input type="number" id="targetWidth" value="200">
     </div>
 
-    <h2>🛢️ Dipping & Safety</h2>
-    <div class="group">
-        <label>Max Path Length (mm)</label>
-        <input type="number" id="maxDist" value="1000">
-    </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="group"><label>X Offset</label><input type="number" id="xOffset" value="33"></div>
-        <div class="group"><label>Y Offset</label><input type="number" id="yOffset" value="110"></div>
-        <div class="group"><label>Dip X</label><input type="number" id="dipX" value="91"></div>
-        <div class="group"><label>Dip Y</label><input type="number" id="dipY" value="25"></div>
-        <div class="group"><label>Dip Z (Deep)</label><input type="number" id="dipZ" value="1.3"></div>
-        <div class="group"><label>Travel Z (High)</label><input type="number" id="zSafeDip" value="16.0"></div>
-        <div class="group"><label>Paint Z (Safe)</label><input type="number" id="zSafe" value="5.0"></div>
-        <div class="group"><label>Feed Rate</label><input type="number" id="feedRate" value="1500"></div>
+    <h2>🎨 Parametri čopiča</h2>
+    <div class="grid-2">
+        <div class="group"><label>Čopič (mm)</label><input type="number" id="brushW" value="2.0" step="0.1"></div>
+        <div class="group"><label>Prekrivanje</label><input type="number" id="overlap" value="0.8" step="0.05"></div>
     </div>
 
-    <div class="btn-container">
-        <button id="generateBtn">PROCESS</button>
-        <button id="downloadBtn" class="secondary-btn">SAVE GCODE</button>
+    <h2>🛢️ Namakanje (Wipe)</h2>
+    <div class="grid-2">
+        <div class="group"><label>Dip X</label><input type="number" id="dipX" value="91.0"></div>
+        <div class="group"><label>Dip Y</label><input type="number" id="dipY" value="25.0"></div>
     </div>
-    <div id="status" class="stats">Ready...</div>
+    <div class="grid-2">
+        <div class="group"><label>Dip Z (Dno)</label><input type="number" id="dipZ" value="1.5"></div>
+        <div class="group"><label>Wipe Radius (mm)</label><input type="number" id="wipeR" value="29.0"></div>
+    </div>
+    <div class="group"><label>Max pot barvanja (mm)</label><input type="number" id="maxDist" value="1000"></div>
+
+    <h2>🚀 Višine & Hitrost</h2>
+    <div class="grid-2">
+        <div class="group"><label>Z Safe (Paint)</label><input type="number" id="zSafe" value="5.0"></div>
+        <div class="group"><label>Z Safe Dip (Rob)</label><input type="number" id="zSafeDip" value="18.0"></div>
+    </div>
+    <div class="grid-2">
+        <div class="group"><label>Hitrost (F)</label><input type="number" id="feedRate" value="1500"></div>
+        <div class="group"><label>Wipe Hitrost</label><input type="number" id="feedWipe" value="300"></div>
+    </div>
+    <div class="grid-2">
+        <div class="group"><label>X Offset</label><input type="number" id="xOff" value="33"></div>
+        <div class="group"><label>Y Offset</label><input type="number" id="yOff" value="110"></div>
+    </div>
+
+    <button id="generateBtn">USTVARI G-KODO</button>
+    <button id="downloadBtn" style="background:#444">PRENESI .GCODE</button>
 </div>
 
-<div id="viewport">
-    <div id="canvas-wrapper">
-        <canvas id="previewCanvas"></canvas>
-    </div>
-    <div id="terminal">G-code Terminal Output...</div>
+<div id="main">
+    <div id="terminal">Naloži SVG in nastavi širino...</div>
 </div>
 
 <script>
     let rawCircles = [];
-    let processedPaths = []; // To store lines for drawing
     let generatedGCode = "";
-    const canvas = document.getElementById('previewCanvas');
-    const ctx = canvas.getContext('2d');
 
-    // SVG Parsing
     document.getElementById('fileInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (event) => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(event.target.result, "image/svg+xml");
-            const svgCircles = doc.querySelectorAll('circle');
-            rawCircles = Array.from(svgCircles).map(c => ({
+            rawCircles = Array.from(doc.querySelectorAll('circle')).map(c => ({
                 cx: parseFloat(c.getAttribute('cx') || 0),
                 cy: parseFloat(c.getAttribute('cy') || 0),
                 r: parseFloat(c.getAttribute('r') || 0)
             }));
-            document.getElementById('status').innerText = `Loaded ${rawCircles.length} halftone dots.`;
-            visualizeDots();
+            document.getElementById('terminal').innerText = `SVG naložen: najdenih ${rawCircles.length} krogov.`;
         };
-        reader.readAsText(file);
+        reader.readAsText(e.target.files[0]);
     });
 
-    function visualizeDots() {
-        if (!rawCircles.length) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const margin = 50;
-        const minX = Math.min(...rawCircles.map(c => c.cx - c.r));
-        const maxX = Math.max(...rawCircles.map(c => c.cx + c.r));
-        const range = maxX - minX;
-        const scale = (canvas.width - margin * 2) / range;
-
-        ctx.strokeStyle = '#333';
-        rawCircles.forEach(c => {
-            ctx.beginPath();
-            ctx.arc((c.cx - minX) * scale + margin, (c.cy - Math.min(...rawCircles.map(dot => dot.cy))) * scale + margin, c.r * scale, 0, Math.PI * 2);
-            ctx.stroke();
-        });
-    }
-
-    document.getElementById('generateBtn').addEventListener('click', generate);
-
-    function generate() {
-        if (!rawCircles.length) return alert("Upload SVG first!");
+    document.getElementById('generateBtn').addEventListener('click', () => {
+        if (!rawCircles.length) return alert("Naloži SVG!");
         
         const cfg = {
-            fill: document.getElementById('fillType').value,
-            brush: parseFloat(document.getElementById('brushWidth').value),
-            overlap: parseFloat(document.getElementById('overlap').value),
             targetW: parseFloat(document.getElementById('targetWidth').value),
-            maxDist: parseFloat(document.getElementById('maxDist').value),
-            feed: document.getElementById('feedRate').value,
-            xOff: parseFloat(document.getElementById('xOffset').value),
-            yOff: parseFloat(document.getElementById('yOffset').value),
+            brush: parseFloat(document.getElementById('brushW').value),
+            overlap: parseFloat(document.getElementById('overlap').value),
             dipX: parseFloat(document.getElementById('dipX').value),
             dipY: parseFloat(document.getElementById('dipY').value),
             dipZ: parseFloat(document.getElementById('dipZ').value),
-            zSafeDip: parseFloat(document.getElementById('zSafeDip').value),
-            zSafe: parseFloat(document.getElementById('zSafe').value)
+            wipeR: parseFloat(document.getElementById('wipeR').value),
+            zHigh: parseFloat(document.getElementById('zSafeDip').value),
+            zLow: parseFloat(document.getElementById('zSafe').value),
+            f: document.getElementById('feedRate').value,
+            fw: document.getElementById('feedWipe').value,
+            maxD: parseFloat(document.getElementById('maxDist').value),
+            xOff: parseFloat(document.getElementById('xOff').value),
+            yOff: parseFloat(document.getElementById('yOff').value)
         };
 
-        const step = cfg.brush * (1.0 - cfg.overlap);
-        let gcode = ["G90", "G21", "; Halftone Dots Export", `; Brush: ${cfg.brush}mm` ];
-        processedPaths = [];
-        
-        // Setup scaling
+        // Skaliranje logike
         const minX = Math.min(...rawCircles.map(c => c.cx - c.r));
         const maxX = Math.max(...rawCircles.map(c => c.cx + c.r));
+        const currentSVGWidth = maxX - minX;
+        const scale = cfg.targetW / currentSVGWidth;
         const maxY = Math.max(...rawCircles.map(c => c.cy + c.r));
-        const scale = cfg.targetW / (maxX - minX);
 
-        let dots = rawCircles.map(c => ({
-            x: (c.cx - minX) * scale + cfg.xOff,
-            y: (maxY - c.cy) * scale + cfg.yOff,
-            r: c.r * scale
-        }));
+        let g = ["G90", "G21", "; Halftone Master V6.2"];
+        g.push(`G0 Z${cfg.zHigh.toFixed(3)} ; Zacetni dvig`);
 
-        let currentPos = { x: cfg.dipX, y: cfg.dipY, z: cfg.zSafeDip };
-        let distSinceDip = 0;
+        let dSinceDip = 0;
+        let curPos = { x: cfg.dipX, y: cfg.dipY };
 
-        // --- Initial Dip ---
-        addDipSequence(gcode, cfg);
-        
-        while (dots.length > 0) {
-            // Nearest Neighbor Optimization
-            let bestIdx = 0;
-            let minDist = Infinity;
-            dots.forEach((d, i) => {
-                let dist = Math.hypot(d.x - currentPos.x, d.y - currentPos.y);
-                if (dist < minDist) { minDist = dist; bestIdx = i; }
-            });
-            const dot = dots.splice(bestIdx, 1)[0];
+        const performDip = () => {
+            g.push(`; --- Namakanje & Wipe ---`);
+            g.push(`G0 Z${cfg.zHigh} F${cfg.f}`);
+            g.push(`G0 X${cfg.dipX} Y${cfg.dipY}`);
+            g.push(`G1 Z${cfg.dipZ} F800`);
+            g.push(`G4 P200`);
+            g.push(`G1 X${(cfg.dipX + cfg.wipeR).toFixed(3)} Y${cfg.dipY} F${cfg.f} ; Na rob`);
+            g.push(`G1 Z${cfg.zHigh} F${cfg.fw} ; Pocasen Wipe dvig`);
+        };
 
-            // Path length estimation
-            let dotPathLen = (cfg.fill === 'spiral') ? 
-                (Math.PI * Math.pow(dot.r, 2)) / step : 
-                (dot.r / step) * 2 * Math.PI * (dot.r / 2);
+        performDip();
 
-            // --- Dip Check ---
-            if (distSinceDip + dotPathLen > cfg.maxDist) {
-                gcode.push(`; Return to Tray (Max Dist)`);
-                gcode.push(`G0 Z${cfg.zSafeDip} F1200`); // LIFT TO TRAVEL HEIGHT BEFORE MOVE
-                gcode.push(`G0 X${cfg.dipX} Y${cfg.dipY}`);
-                addDipSequence(gcode, cfg);
-                distSinceDip = 0;
-                currentPos = { x: cfg.dipX, y: cfg.dipY, z: cfg.zSafeDip };
+        rawCircles.forEach(c => {
+            const x = (c.cx - minX) * scale + cfg.xOff;
+            const y = (maxY - c.cy) * scale + cfg.yOff;
+            const r = c.r * scale;
+
+            const step = cfg.brush * (1 - cfg.overlap);
+            const approxPathLen = (Math.PI * r * r) / step;
+
+            if (dSinceDip + approxPathLen > cfg.maxD) {
+                g.push(`G0 Z${cfg.zHigh}`);
+                performDip();
+                dSinceDip = 0;
             }
 
-            // --- Move to Dot ---
-            gcode.push(`; Move to Dot`);
-            // Safety: If we just dipped, we are at zSafeDip. 
-            // We move to dot location still at zSafeDip height.
-            gcode.push(`G0 X${dot.x.toFixed(3)} Y${dot.y.toFixed(3)} Z${cfg.zSafeDip}`);
-            
-            // Start Painting
-            gcode.push(`G0 Z${cfg.zSafe} ; Drop to Paint Height`);
-            gcode.push(`G1 Z0 F600 ; Contact`);
+            g.push(`G0 X${x.toFixed(3)} Y${y.toFixed(3)} F${cfg.f}`);
+            g.push(`G0 Z${cfg.zLow} ; Paint Height`);
+            g.push(`G1 Z0 F600 ; Dotik papirja`);
 
-            if (cfg.fill === 'spiral') {
-                let theta = 1;
-                while (true) {
-                    let currR = (step * theta) / (2 * Math.PI);
-                    if (currR > dot.r) break;
-                    let px = dot.x + currR * Math.cos(theta);
-                    let py = dot.y + currR * Math.sin(theta);
-                    gcode.push(`G1 X${px.toFixed(3)} Y${py.toFixed(3)} F${cfg.feed}`);
-                    theta += 0.3;
-                }
-            } else {
-                for (let r = dot.r; r >= 0; r -= step) {
-                    gcode.push(`G1 X${(dot.x + r).toFixed(3)} Y${dot.y.toFixed(3)}`);
-                    if (r > 0) gcode.push(`G2 X${(dot.x + r).toFixed(3)} Y${dot.y.toFixed(3)} I${(-r).toFixed(3)} J0`);
-                }
+            // Spirala
+            let t = 0;
+            while (true) {
+                let currR = (step * t) / (2 * Math.PI);
+                if (currR > r) break;
+                g.push(`G1 X${(x + currR * Math.cos(t)).toFixed(3)} Y${(y + currR * Math.sin(t)).toFixed(3)}`);
+                t += 0.5;
             }
 
-            gcode.push(`G0 Z${cfg.zSafe} ; Safe Lift`);
-            distSinceDip += dotPathLen;
-            currentPos = { x: dot.x, y: dot.y, z: cfg.zSafe };
-        }
-
-        gcode.push("G0 Z30 ; Final Lift", "M2");
-        generatedGCode = gcode.join("\n");
-        document.getElementById('terminal').innerText = generatedGCode;
-        drawGCodePath(gcode);
-    }
-
-    function addDipSequence(gcode, cfg) {
-        gcode.push(`; --- Dipping Sequence ---`);
-        gcode.push(`G0 X${cfg.dipX} Y${cfg.dipY}`);
-        gcode.push(`G1 Z${cfg.dipZ} F800`);
-        // Spiral mix
-        for(let i=0; i<10; i++) {
-            let r = i * 0.4;
-            let a = i * 1.5;
-            gcode.push(`G1 X${(cfg.dipX + r*Math.cos(a)).toFixed(2)} Y${(cfg.dipY + r*Math.sin(a)).toFixed(2)} F1000`);
-        }
-        gcode.push(`G1 Z${cfg.zSafeDip} F1200 ; LIFT TO TRAVEL HEIGHT`);
-    }
-
-    function drawGCodePath(lines) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = 1;
-        let scale = 2.5;
-        let offX = 50, offY = 50;
-
-        ctx.beginPath();
-        ctx.strokeStyle = '#555'; // Travel color
-        
-        let curX = 0, curY = 0, isDown = false;
-
-        lines.forEach(line => {
-            if (line.startsWith('G0')) {
-                let xMatch = line.match(/X([\d.-]+)/);
-                let yMatch = line.match(/Y([\d.-]+)/);
-                if (xMatch) curX = parseFloat(xMatch[1]);
-                if (yMatch) curY = parseFloat(yMatch[1]);
-                ctx.moveTo(curX * scale + offX, curY * scale + offY);
-            }
-            if (line.startsWith('G1')) {
-                ctx.strokeStyle = '#00adb5'; // Paint color
-                let xMatch = line.match(/X([\d.-]+)/);
-                let yMatch = line.match(/Y([\d.-]+)/);
-                if (xMatch) curX = parseFloat(xMatch[1]);
-                if (yMatch) curY = parseFloat(yMatch[1]);
-                ctx.lineTo(curX * scale + offX, curY * scale + offY);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(curX * scale + offX, curY * scale + offY);
-            }
+            g.push(`G0 Z${cfg.zLow}`);
+            dSinceDip += approxPathLen;
         });
-    }
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
+        g.push(`G0 Z${cfg.zHigh}`, "M2");
+        generatedGCode = g.join("\n");
+        document.getElementById('terminal').innerText = generatedGCode;
+    });
+
+    document.getElementById('downloadBtn').onclick = () => {
         const blob = new Blob([generatedGCode], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = "dots_halftone.gcode";
+        link.download = "halftone_scaled.gcode";
         link.click();
-    });
-
-    // Handle canvas resizing
-    window.addEventListener('resize', () => {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-    });
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
+    };
 </script>
 </body>
 </html>
